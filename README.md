@@ -1,7 +1,7 @@
 # **Using Reinforcment Learning for Topology Optimization**
 
 This repository contains Ressources as well as code used in the preparation, research, as well as writing of my bachelor's thesis.
-This paper will be about presenting, as well as analysing the usage of reinforcment learning algorithms for the problem of topology optimization.
+This paper will be about presenting and analysing the usage of reinforcment learning algorithms for the problem of topology optimization.
 
 The underlying idea, as well as code much of this is based off of https://github.com/gigatskhondia/gigala
 
