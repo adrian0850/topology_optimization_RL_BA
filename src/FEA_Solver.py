@@ -201,7 +201,7 @@ def FEASolve(args,VoidCheck,Lx,Ly,LC_Nodes,Loaded_Directions,BC_Nodes,Stress):
     ElementsX = args.nelx
     ElementsY = args.nely
 
-    BC_Nodes = args
+    BC_Nodes = args.normals
     
     #Void Material Representation 
     """Taken from: An FEM Analysis with Consideration of Random Void Defects for 
@@ -229,8 +229,8 @@ def FEASolve(args,VoidCheck,Lx,Ly,LC_Nodes,Loaded_Directions,BC_Nodes,Stress):
     conditions of the given problem'''
     
     'BC currently set up to limit displacement on Y-Axis with distributed force on X=Lx' 
-    fixedNodeX=list(BC_Nodes)
-    fixedNodeY=list(BC_Nodes+numberNodes)
+    fixedNodeX, fixedNodeY= np.where(BC_Nodes == 1)
+    
  
     prescribedDof=[fixedNodeX+fixedNodeY]
     'Input Force Vectors'
