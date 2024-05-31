@@ -8,7 +8,7 @@ from gymnasium import Env
 from gymnasium.spaces import Discrete
 import numpy as np
 import itertools
-from Node_Element_Extraction import BC_Nodes,LC_Nodes,Element_Lists
+from Nodes import BC_Nodes,LC_Nodes,Element_Lists
 from FEA_SOLVER_GENERAL import FEASolve, isolate_largest_group_original, rectangularmesh
 import math
 import copy

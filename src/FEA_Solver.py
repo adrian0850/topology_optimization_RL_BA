@@ -201,7 +201,7 @@ def FEASolve(args,VoidCheck,Lx,Ly,LC_Nodes,Loaded_Directions,BC_Nodes,Stress):
     ElementsX = args.nelx
     ElementsY = args.nely
 
-    BC_Nodes = args.normals
+    BC_Nodes = BC_Nodes
     
     #Void Material Representation 
     """Taken from: An FEM Analysis with Consideration of Random Void Defects for 
@@ -246,6 +246,9 @@ def FEASolve(args,VoidCheck,Lx,Ly,LC_Nodes,Loaded_Directions,BC_Nodes,Stress):
     #|                        v                             |
     #--------------------------------------------------------
     LD_Count=0
+    print("LC_Nodes")
+    print(LC_Nodes)
+    print(type(LC_Nodes))
     for F in range(0,len(LC_Nodes)):
         if F/2==int(F/2) and F/2!=0:
             LD_Count+=1
