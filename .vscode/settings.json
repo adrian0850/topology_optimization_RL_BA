@@ -3,3 +3,6 @@
         "./src"
     ]
 }
+"editor.Rulers": [
+    {column: 79, color: '#ff0000'},
+],
