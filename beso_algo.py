@@ -51,11 +51,12 @@ def sbeso(nelx, nely, volfrac, er, rmin):
         print(f"It.: {i:4d} Obj.: {c_list[-1]:10.4f} Vol.: {sum(sum(x)) / (nelx * nely):6.3f} ch.: {change:6.3f}")
 
         # PLOT DENSITIES
-        plt.imshow(-x, cmap='gray', interpolation='nearest')
+        plt.imshow(-x, cmap='YlOrBr_r', interpolation='nearest')
         plt.axis('equal')
         plt.axis('off')
         plt.show(block=False)
         plt.pause(1e-6)
+        plt.savefig("dummy_name.png")
 
 # Replace the placeholders with the actual implementations of FE, lk, check, ADDDEL, and disp
 # Ensure that the data types and function signatures match the original Simp code
@@ -105,11 +106,13 @@ def FE(nelx, nely, x, penal):
             K[np.ix_(edof, edof)] += x[ely - 1, elx - 1]**penal * KE
 
     # DEFINE LOADS AND SUPPORT (Cantilever)
-    F[2 * (nelx + 1) * (nely + 1) - nely- 1, 0] = -1.0
+    F[2 * (nelx + 1) * (nely + 1) - 1, 0] = -1.0
     fixeddofs = np.arange(0, 2 * (nely + 1))
     alldofs = np.arange(0, 2 * (nely + 1) * (nelx + 1))
     freedofs = np.setdiff1d(alldofs, fixeddofs)
-
+    print(fixeddofs)
+    print(alldofs)
+    print(freedofs)
     # SOLVING
     K_ff = K[np.ix_(freedofs, freedofs)]
     f_f = F[freedofs, 0]
@@ -137,7 +140,7 @@ def lk():
 
 
 def main():
-        sbeso(120, 40, 0.45, 0.02, 1.5)
+        sbeso(240, 80, 0.45, 0.02, 1.5)
 if __name__ == '__main__':
     main()
 
