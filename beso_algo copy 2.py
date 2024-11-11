@@ -1,10 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+WIDTH = 12
+HEIGHT = 6
+
 # Load conditions are the following:
 # B_LEFT; B_MIDDLE; B_RIGHT; M_LEFT; M_MIDDLE; M RIGHT; T_LEFT; T_MIDDLE; T_RIGHT
 
-LOAD_VAR = "T_LEFT"
+LOAD_VAR = "B_RIGHT"
 
 # Bounded conditions are the following:
 # ALL_LEFT
@@ -20,7 +23,7 @@ LOAD_VAR = "T_LEFT"
 # LT_RB (left top and right bottom)
 # LB_RT (left bottom and right top)
 
-BOUND_VAR = "ALL_RIGHT"
+BOUND_VAR = "ALL_LEFT"
 
 def sbeso(nelx, nely, volfrac, er, rmin):
     x = np.ones((nely, nelx))
@@ -221,7 +224,7 @@ def lk():
 
 
 def main():
-        sbeso(120, 40, 0.5, 0.02, 1.5)
+        sbeso(WIDTH, HEIGHT, 0.6, 0.02, 1.5)
 if __name__ == '__main__':
     main()
 
