@@ -117,6 +117,21 @@ def check(nelx, nely, rmin, x, dc):
     return dcf
 
 def FE(nelx, nely, x, penal):
+    """
+    Perform finite element analysis on a 2D structure.
+
+    Parameters:
+    nelx (int): Number of elements along the x-axis.
+    nely (int): Number of elements along the y-axis.
+    x (numpy.ndarray): Density distribution matrix.
+    penal (float): Penalization factor for material properties.
+
+    Returns:
+    numpy.ndarray: Displacement vector for the structure.
+
+    The function computes the global stiffness matrix and solves for the 
+    displacements of a 2D structure under given loads and boundary conditions.
+    """
     KE = lk()
     K = np.zeros((2 * (nelx + 1) * (nely + 1), 2 * (nelx + 1) * (nely + 1)))
     U = np.zeros((2 * (nely + 1) * (nelx + 1), 1))
