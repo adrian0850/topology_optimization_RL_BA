@@ -14,7 +14,7 @@ LOAD_VAR = "B_RIGHT"
 # LT_RB (left top and right bottom)
 # LB_RT (left bottom and right top)
 
-BOUND_VAR = "LT_LB"
+BOUND_VAR = "ALL_LEFT"
 
 def sbeso(nelx, nely, volfrac, er, rmin):
     x = np.ones((nely, nelx))
@@ -106,6 +106,16 @@ def check(nelx, nely, rmin, x, dc):
     return dcf
 
 def FE(nelx, nely, x, penal):
+    """
+    Perform finite element analysis for topology optimization.
+    Parameters:
+    nelx (int): Number of elements along the x-axis.
+    nely (int): Number of elements along the y-axis.
+    x (numpy.ndarray): Density distribution matrix.
+    penal (float): Penalization factor for SIMP (Solid Isotropic Material with Penalization) method.
+    Returns:
+    numpy.ndarray: Displacement vector.
+    """
     KE = lk()
     K = np.zeros((2 * (nelx + 1) * (nely + 1), 2 * (nelx + 1) * (nely + 1)))
     F = np.zeros((2 * (nely + 1) * (nelx + 1), 1))
@@ -163,7 +173,7 @@ def get_loaded_matrix(nelx, nely):
         dof_pos = 2 * (nelx+1) -1
     elif LOAD_VAR == "T_MIDDLE":
         dof_pos = nelx
-    elif LOAD_VAR = "T_LEFT":
+    elif LOAD_VAR == "T_LEFT":
         dof_pos = 1
     F[dof_pos, 0] = -1.0
     return F
