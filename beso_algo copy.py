@@ -10,10 +10,13 @@ def sbeso(nelx, nely, volfrac, er, rmin):
     dc = np.zeros((nely, nelx))
     c_list= []
     load_matrix = np.zeros((nely + 1, nelx + 1))
-    load_matrix[0, -1] = 1
+    load_matrix[-1, -1] = 1
 
     support_matrix = np.zeros((nely + 1, nelx + 1))
-    support_matrix[:, 0] = 1
+    support_matrix[0, 0] = 1
+    support_matrix[-1, 0] = 1
+    print(support_matrix)
+    print(load_matrix)
 
     while change > 0.001:
         i += 1
@@ -61,6 +64,7 @@ def sbeso(nelx, nely, volfrac, er, rmin):
         plt.axis('off')
         plt.show(block=False)
         plt.pause(1e-6)
+        plt.savefig("dummy_name.png")
 
 # Replace the placeholders with the actual implementations of FE, lk, check, ADDDEL, and disp
 # Ensure that the data types and function signatures match the original Simp code

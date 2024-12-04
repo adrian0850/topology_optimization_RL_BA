@@ -1,12 +1,21 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+WIDTH = 12
+HEIGHT = 6
+
 # Load conditions are the following:
 # B_LEFT; B_MIDDLE; B_RIGHT; M_LEFT; M_MIDDLE; M RIGHT; T_LEFT; T_MIDDLE; T_RIGHT
 
 LOAD_VAR = "B_RIGHT"
 
 # Bounded conditions are the following:
+# ALL_LEFT
+# ALL_RIGHT
+# ALL_TOP
+# ALL_BOTTOM
+# ALL_LEFT_RIGHT
+# ALL_TOP_BOTTOM
 # LT_LB (top and bottom left side)
 # RT_RB (top and bottom right side)
 # LT_RT (left and right side top)
@@ -66,11 +75,13 @@ def sbeso(nelx, nely, volfrac, er, rmin):
         print(f"It.: {i:4d} Obj.: {c_list[-1]:10.4f} Vol.: {sum(sum(x)) / (nelx * nely):6.3f} ch.: {change:6.3f}")
 
         # PLOT DENSITIES
-        plt.imshow(-x, cmap='gray', interpolation='nearest')
+        plt.imshow(-x, cmap='YlOrBr_r', interpolation='nearest')
         plt.axis('equal')
         plt.axis('off')
-        plt.show(block=False)
-        plt.pause(1e-6)
+        #plt.show(block=False)
+        #plt.pause(1e-6)
+        plt.savefig("beso.png")
+        plt.close()
 
 # Replace the placeholders with the actual implementations of FE, lk, check, ADDDEL, and disp
 # Ensure that the data types and function signatures match the original Simp code
@@ -107,18 +118,22 @@ def check(nelx, nely, rmin, x, dc):
 
 def FE(nelx, nely, x, penal):
     """
-    Perform finite element analysis for topology optimization.
+    Perform finite element analysis on a 2D structure.
+
     Parameters:
     nelx (int): Number of elements along the x-axis.
     nely (int): Number of elements along the y-axis.
     x (numpy.ndarray): Density distribution matrix.
-    penal (float): Penalization factor for SIMP (Solid Isotropic Material with Penalization) method.
+    penal (float): Penalization factor for material properties.
+
     Returns:
-    numpy.ndarray: Displacement vector.
+    numpy.ndarray: Displacement vector for the structure.
+
+    The function computes the global stiffness matrix and solves for the 
+    displacements of a 2D structure under given loads and boundary conditions.
     """
     KE = lk()
     K = np.zeros((2 * (nelx + 1) * (nely + 1), 2 * (nelx + 1) * (nely + 1)))
-    F = np.zeros((2 * (nely + 1) * (nelx + 1), 1))
     U = np.zeros((2 * (nely + 1) * (nelx + 1), 1))
 
 
@@ -130,7 +145,7 @@ def FE(nelx, nely, x, penal):
             K[np.ix_(edof, edof)] += x[ely - 1, elx - 1]**penal * KE
 
     # DEFINE LOADS AND SUPPORT (Cantilever)
-    f = get_loaded_matrix(nelx, nely)
+    F = get_loaded_matrix(nelx, nely)
     fixeddofs, alldofs, freedofs = get_dofs(nelx, nely)
 
     # SOLVING
@@ -143,12 +158,33 @@ def FE(nelx, nely, x, penal):
 
 def get_dofs(nelx, nely):
     alldofs = np.arange(0, 2 * (nely + 1) * (nelx + 1))
-    if BOUND_VAR == "ALL_LEFT":
-        fixeddofs = np.arange(0, 2 * (nely + 1))
-    if BOUND_VAR == "ALL_RIGHT":
-        fixeddofs = np.arange(0, alldofs, step = nelx+1)
-    if BOUND_VAR == "ALL_TOP":
-        fixeddofs = np.arrange
+    last_node = 2 * (nely + 1) * (nelx + 1)
+    brush_y = int((nely/10)*2)
+    brush_x = int(nelx/10)
+    match BOUND_VAR:
+        case "ALL_LEFT":
+            fixeddofs = np.arange(0, 2 * (nely + 1))
+        case "ALL_RIGHT":
+            fixeddofs = np.arange(last_node - 2 * (nely + 1), last_node)
+        case "ALL_TOP":
+            fixeddofs = np.arange(0, last_node- (2 * (nely + 1)), step=nely + 1)
+            for i in range(fixeddofs.size):
+                fixeddofs = np.append(fixeddofs, fixeddofs[i] + 1)
+            print(alldofs)
+            print(fixeddofs)
+        case "ALL_BOTTOM":
+            fixeddofs = np.arange(nely, last_node, step=nely)
+        case "LB_RB":
+            LB = np.arange(2*(nely), (2*nely+1) - brush_y, step=-1)
+            BL = np.arange(2*(nely), brush_x * (nely+1)* (nelx+1))
+            RB = np.arange(last_node, last_node - brush_y, step=-1)
+            BR = np.arange(last_node, last_node - brush_x * (nely+1), step=nely+1)
+            fixeddofs = LB
+            print(fixeddofs)
+        case "LEFT_RIGHT":
+            fixeddofs = np.concatenate((np.arange(0, 2 * (nely + 1)), np.arange(last_node - 2 * (nely + 1), last_node)))
+        case _:
+            raise ValueError(f"Unknown BOUND_VAR: {BOUND_VAR}")
 
     alldofs = np.arange(0, 2 * (nely + 1) * (nelx + 1))
     freedofs = np.setdiff1d(alldofs, fixeddofs)
@@ -197,7 +233,7 @@ def lk():
 
 
 def main():
-        sbeso(120, 40, 0.45, 0.02, 1.5)
+        sbeso(WIDTH, HEIGHT, 0.6, 0.02, 1.5)
 if __name__ == '__main__':
     main()
 
