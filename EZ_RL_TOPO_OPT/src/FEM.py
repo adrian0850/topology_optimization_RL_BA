@@ -1,4 +1,5 @@
 import math
+import constants as const
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,14 +24,18 @@ def plot_mesh(nodes, conn, width=10, height=8):
     nodes = np.array(nodes)  # Convert nodes to a NumPy array
     plt.figure(figsize=(width, height))  # Set the figure size
     for element in conn:
-        x = [nodes[i][1] for i in element]  # Swap x and y
-        y = [-nodes[i][0] for i in element]  # Swap x and y and negate y
-        plt.plot(x, y, 'b-')
+        # Ignore the last element (is_voided flag) when accessing node indices
+        x = [nodes[i][1] for i in element[:4]]  # Swap x and y
+        y = [-nodes[i][0] for i in element[:4]]  # Swap x and y and negate y
+        if element[4]:  # Check if the element is voided
+            plt.plot(x, y, 'r--')  # Plot voided elements with red dashed lines
+        else:
+            plt.plot(x, y, 'b-')  # Plot non-voided elements with blue solid lines
     plt.scatter(nodes[:, 1], -nodes[:, 0], color='red', s=10)  # Swap x and y and negate y
 
     # Add text annotations for each node
     for i, (x, y) in enumerate(nodes):
-        plt.text(y, -x, str(i+1), fontsize=20, ha='right')
+        plt.text(y, -x, str(i + 1), fontsize=20, ha='right')
 
     plt.axis('equal')
     plt.show()
@@ -41,14 +46,14 @@ def get_max_stress_and_strain(smax, smin, emax, emin):
     return max_stress, max_strain
 
 def assemble_load(nodes, load, f):
-  for load_data in load:
-    node_index = load_data[0]
-    dof = load_data[1]
-    magnitude = load_data[2]
-    global_dof = 2 * node_index + dof - 1
-    f[global_dof] += magnitude
+    for load_data in load:
+        node_index = load_data[0]
+        dof = load_data[1]
+        magnitude = load_data[2]
+        global_dof = 2 * node_index + dof - 1
+        f[global_dof] += magnitude
 
-def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
+def FEM(nodes, conn, boundary, load, plot_flag, grid, device='cpu'):
     """
     Perform Finite Element Method (FEM) analysis on a given mesh.
 
@@ -89,16 +94,17 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
 ###############################
     # Plane-strain material tangent (see Bathe p. 194)
     # C is 3x3
-    E = 100.0
-    v = 0.3
-    C = E/(1.0+v)/(1.0-2.0*v) * np.array([[1.0-v, v, 0.0], [v, 1.0-v, 0.0], [0.0, 0.0, 0.5-v]])
+    E = const.E
+    v = const.v
+    C_real = const.C_real
+    C_dummy = const.C_dummy
     ###############################
     # Make stiffness matrix
     # if N is the number of DOF, then K is NxN
     K = lil_matrix((2 * num_nodes, 2 * num_nodes))    # square zero matrix
     # 2x2 Gauss Quadrature (4 Gauss points)
     # q4 is 4x2
-    q4 = np.array([[-1,-1],[1,-1],[-1,1],[1,1]]) / math.sqrt(3.0)
+    q4 = np.array([[-1, -1], [1, -1], [-1, 1], [1, 1]]) / math.sqrt(3.0)
     # print('\n** Assemble stiffness matrix')
     # strain in an element: [strain] = B    U
     #                        3x1     = 3x8  8x1
@@ -106,37 +112,38 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
     # strain11 = B11 U1 + B12 U2 + B13 U3 + B14 U4 + B15 U5 + B16 U6 + B17 U7 + B18 U8
     #          = B11 u1          + B13 u1          + B15 u1          + B17 u1
     #          = dN1/dx u1       + dN2/dx u1       + dN3/dx u1       + dN4/dx u1
-    B = np.zeros((3,8))
+    B = np.zeros((3, 8))
     # conn[0] is node numbers of the element
-    for c in conn:     # loop through each element
-        # coordinates of each node in the element
-        # shape = 4x2
-        # for example:
-        #    nodePts = [[0.0,   0.0],
-        #               [0.033, 0.0],
-        #               [0.033, 0.066],
-        #               [0.0,   0.066]]
-        nodePts = nodes[c,:]
-        Ke = np.zeros((8,8))	# element stiffness matrix is 8x8
-        for q in q4:			# for each Gauss point
-            # q is 1x2, N(xi,eta)
-            dN = gradshape(q)       # partial derivative of N wrt (xi,eta): 2x4
-            J  = np.dot(dN, nodePts).T # J is 2x2
-            dN = np.dot(np.linalg.inv(J), dN)    # partial derivative of N wrt (x,y): 2x4
-            # assemble B matrix  [3x8]
-            B[0,0::2] = dN[0,:]
-            B[1,1::2] = dN[1,:]
-            B[2,0::2] = dN[1,:]
-            B[2,1::2] = dN[0,:]
-            # element stiffness matrix
-            Ke += np.dot(np.dot(B.T,C),B) * np.linalg.det(J)
+    for c in conn:
+        nodePts = nodes[c[:4], :]  # Only take the first three nodes for the element
+        is_voided = c[4]  # The fourth element is the voided flag
+        Ke = np.zeros((8, 8))
+        for q in q4:
+            dN = gradshape(q)
+
+            J = np.dot(dN, nodePts).T
+            if np.linalg.det(J) == 0:
+                print("Singular Jacobian detected.")
+                return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+            dN = np.dot(np.linalg.inv(J), dN)
+            B[0, 0::2] = dN[0, :]
+            B[1, 1::2] = dN[1, :]
+            B[2, 0::2] = dN[1, :]
+            B[2, 1::2] = dN[0, :]
+
+            if is_voided:
+                C = C_dummy
+            else:
+                C = C_real
+
+            Ke += np.dot(np.dot(B.T, C), B) * np.linalg.det(J)
         # Scatter operation
-        for i,I in enumerate(c):
-            for j,J in enumerate(c):
-                K[2*I,2*J]     += Ke[2*i,2*j]
-                K[2*I+1,2*J]   += Ke[2*i+1,2*j]
-                K[2*I+1,2*J+1] += Ke[2*i+1,2*j+1]
-                K[2*I,2*J+1]   += Ke[2*i,2*j+1]
+        for i, I in enumerate(c[:4]):  # Only take the first three nodes for the element
+            for j, J in enumerate(c[:4]):  # Only take the first three nodes for the element
+                K[2 * I, 2 * J] += Ke[2 * i, 2 * j]
+                K[2 * I + 1, 2 * J] += Ke[2 * i + 1, 2 * j]
+                K[2 * I + 1, 2 * J + 1] += Ke[2 * i + 1, 2 * j + 1]
+                K[2 * I, 2 * J + 1] += Ke[2 * i, 2 * j + 1]
     ###############################
     # Assign nodal forces and boundary conditions
     #    if N is the number of nodes, then f is 2xN
@@ -170,7 +177,16 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
     K = csr_matrix(K)
     ###############################
     # print('\n** Solve linear system: Ku = f')	# [K] = 2N x 2N, [f] = 2N x 1, [u] = 2N x 1
-    u = spsolve(K, f)
+    try:
+        u = spsolve(K, f)
+    except Exception as e:
+        print(f"Error solving linear system: {e}")
+        return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+
+    if np.isnan(u).any():
+        print("NaN detected in displacement vector.")
+        return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
+
     ###############################
     # print('\n** Post process the data')
     # (pre-allocate space for nodal stress and strain)
@@ -193,11 +209,16 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
     num_elements = len(conn)
 
     for c in conn:  # for each element (conn is Nx4)
-        nodePts = nodes[c,:]  # 4x2, eg: [[1.1,0.2], [1.2,0.3], [1.3,0.4], [1.4, 0.5]]
+        nodePts = nodes[c[:4], :]  # Only take the first three nodes for the element
+        is_voided = c[4]  # The fourth element is the voided flag
         for q in q4:  # for each integration pt, eg: [-0.7,-0.7]
             dN = gradshape(q)  # 2x4
             J  = np.dot(dN, nodePts).T  # 2x2
+            if np.linalg.det(J) == 0:
+                print("Singular Jacobian detected during post-processing.")
+                return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
             dN = np.dot(np.linalg.inv(J), dN)  # 2x4
+            
             B[0,0::2] = dN[0,:]  # 3x8
             B[1,1::2] = dN[1,:]
             B[2,0::2] = dN[1,:]
@@ -219,9 +240,8 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
             emax = np.maximum(emax, strain.T[0])
             smin = np.minimum(smin, stress.T[0])
             smax = np.maximum(smax, stress.T[0])
-
-            node_strain[c, :] = strain.T
-            node_stress[c, :] = stress.T
+            node_strain[c[:3], :] = strain.T
+            node_stress[c[:3], :] = stress.T
 
             # Accumulate total strain and stress for average calculation
             total_strain += strain.T[0]
@@ -250,6 +270,11 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
         yvec = []
         res  = []
         plot_type = 'e11'
+        voided_nodes = set()
+        for c in conn:
+            if c[4]:  # Check if the element is voided
+                voided_nodes.update(c[:4])
+        
         for ni, pt in enumerate(nodes):
             xvec.append(pt[1] + u[2*ni+1])  # Swap x and y
             yvec.append(-(pt[0] + u[2*ni]))   # Swap x and y, negate y
@@ -264,8 +289,13 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
 
         tri = []
         for c in conn:
-            tri.append([c[0], c[1], c[2]])  # First triangle
-            tri.append([c[0], c[2], c[3]])  # Second triangle
+            if c[4]:  # Check if the element is voided
+                plt.fill([xvec[c[0]], xvec[c[1]], xvec[c[2]], xvec[c[3]]],
+                     [yvec[c[0]], yvec[c[1]], yvec[c[2]], yvec[c[3]]],
+                     'gray', alpha=0.0)  # Plot voided elements with transparency
+            else:
+                tri.append([c[0], c[1], c[2]])  # First triangle
+                tri.append([c[0], c[2], c[3]])  # Second triangle
         t = plt.tricontourf(xvec, yvec, res, triangles=tri, levels=14, cmap=plt.get_cmap('jet'))
 
         # Plot bounded nodes
@@ -291,6 +321,7 @@ def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
 
             # Add annotation for the magnitude of the force
             plt.annotate(f'{l[2]:.2f}', (xvec[node_index], yvec[node_index]), textcoords="offset points", xytext=(5,5), ha='center', color='k')
+
 
         plt.scatter(xvec, yvec, marker='o', c='b', s=0.5) # (plot the nodes)
         plt.grid(False)  # Turn off the grid

@@ -36,12 +36,12 @@ def FEM_test():
 
     # Call the FEM function
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    init_max_stress, init_max_strain, avg_u1, avg_u2, element_count, init_average_stress, init_average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag=True, device=device)
+    init_max_stress, init_max_strain, avg_u1, avg_u2, element_count, init_average_stress, init_average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag=True, grid=grid, device=device)
 
     bad = False
-    good = True
+    good = False
 
-    bad = False
+    bad = True
     #good = True
     # Modify the grid
     if bad:
@@ -76,7 +76,7 @@ def reinforcement_learning_test():
     height = int(input("Enter grid height: "))
 
     bounded = [(0, 0), (-1, 0)]
-    loaded = [(-1, -0, "LY50")]
+    loaded = [(-1, -1, "LY50")]
 
     # Create the vectorized environment
     env = SubprocVecEnv([rl.make_env(height, width, bounded, loaded) for _ in range(num_envs)])
@@ -93,20 +93,43 @@ def reinforcement_learning_test():
     model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device='cuda' if torch.cuda.is_available() else 'cpu')
 
     # Train the model
-    model.learn(total_timesteps=5e5, progress_bar=True)
+    model.learn(total_timesteps=1000, progress_bar=True)
     
     model.save("ppo_topopt")
 
-    obs = env.reset()
-    for i in range(1000):
+    env.close()
+    env = rl.TopOptEnv(height, width, bounded, loaded, mode="eval")
+    model = PPO.load("ppo_topopt", env = env)
+    obs, _ = env.reset()
+    for i in range(10):
         action, _states = model.predict(obs)
-        obs, rewards, dones, info = env.step(action)
-        env.render()
+        action = action.item()
+
+        obs, rewards, dones, _, info = env.step(action)
+        env.print()
+
+def load_test():
+    width = int(input("Enter grid width: "))
+    height = int(input("Enter grid height: "))
+
+    bounded = [(0, 0), (-1, 0)]
+    loaded = [(-1, -1, "LY50")]
+    env = rl.TopOptEnv(height, width, bounded, loaded, mode="eval")
+    model = PPO.load("ppo_topopt", env = env)
+    obs, _ = env.reset()
+    for i in range(20):
+        action, _states = model.predict(obs)
+        action = action.item()
+
+        obs, rewards, dones, _, info = env.step(action)
+        env.print()
+
 
 def main():
     #Env_test()
     #FEM_test()
-    reinforcement_learning_test()
+    #reinforcement_learning_test()
+    load_test()
 
 if __name__ == "__main__":
     main()
