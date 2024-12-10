@@ -4,6 +4,8 @@ import numpy as np
 import gymnasium as gym
 import constants as const
 import random
+import torch
+import time
 
 import FEM as fem
 
@@ -26,38 +28,42 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
 
 def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain):
     a,b,c,d = dsf.extract_fem_data(grid)
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False)
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, device=device)
     reward = reward_function(grid, init_stress, max_stress, init_strain, max_strain, init_avg_stress, average_stress, init_avg_strain, average_strain)
+
     return reward, max_stress, max_strain, average_stress, average_strain
 
 def get_needed_fem_values(grid):
     a,b,c,d = dsf.extract_fem_data(grid)
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, device=device)
     return max_stress, max_strain, average_stress, average_strain
 
-def get_observation_space_range(height,width):
-        length = (4*height * width)+4
-        dim = height * width
-        design_space_low = np.zeros(length)
-        design_space_high = np.zeros(length)
-        for i in range(length):
-            if i / dim < 1:
-                design_space_low[i] = 0
-                design_space_high[i] = 1
-            elif i / dim < 2:
-                design_space_low[i] = 0
-                design_space_high[i] = 1
-            elif i / dim < 3:
-                design_space_low[i] = -100
-                design_space_high[i] = 100
-            elif i / dim < 4:
-                design_space_low[i] = -100
-                design_space_high[i] = 100
-            else:
-                design_space_low[i] = -1000
-                design_space_high[i] = 1000
-        shape = (length,)
-        return design_space_low, design_space_high, shape
+def get_observation_space(height, width):
+    # Define the grid space (image) with appropriate ranges for each channel
+    grid_low = np.zeros((4, height, width), dtype=np.float32)
+    grid_high = np.ones((4, height, width), dtype=np.float32)
+    
+    # Set the appropriate ranges for the third and fourth channels
+    grid_low[2, :, :] = -100
+    grid_high[2, :, :] = 100
+    grid_low[3, :, :] = -100
+    grid_high[3, :, :] = 100
+    
+    grid_space = gym.spaces.Box(low=grid_low, high=grid_high, dtype=np.float32)
+    
+    # Define the vector space for stresses and strain
+    vector_space = gym.spaces.Box(low=-1000, high=1000, shape=(4,), dtype=np.float32)
+    
+    # Combine into a dictionary space
+    observation_space = gym.spaces.Dict({
+        "Grid": grid_space,
+        "Stresses": vector_space
+    })
+    
+    return observation_space
 
 class TopOptEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
@@ -79,8 +85,7 @@ class TopOptEnv(gym.Env):
         self.init_max_stress, self.init_max_strain, self.init_avg_stress, self.init_avg_strain = get_needed_fem_values(self.grid)
         
         self.action_space = gym.spaces.Discrete(height * width)
-        low, high, shape = get_observation_space_range(self.height, self.width)
-        self.observation_space = gym.spaces.Box(low=low, high=high, shape=shape, dtype=np.float64)
+        self.observation_space = get_observation_space(self.height, self.width)
         self.step_count = 0
         self.reward = 0
 
@@ -108,16 +113,11 @@ class TopOptEnv(gym.Env):
         #print("Reward: ", self.reward)
         return self.obs, self.reward, terminated, truncated, self.get_info()
     
-    def create_observation(self, grid, m_stress,m_strain,a_stress,a_strain):
-        obs = np.zeros((4*self.height*self.width)+4)
-        obs[0:self.height*self.width] = grid[0,:,:].flatten()
-        obs[self.height*self.width:2*self.height*self.width] = grid[1,:,:].flatten()
-        obs[2*self.height*self.width:3*self.height*self.width] = grid[2,:,:].flatten()
-        obs[3*self.height*self.width:4*self.height*self.width] = grid[3,:,:].flatten()
-        obs[4*self.height*self.width] = m_stress
-        obs[(4*self.height*self.width)+1] = m_strain
-        obs[(4*self.height*self.width)+2] = a_stress
-        obs[(4*self.height*self.width)+3] = a_strain
+    def create_observation(self, grid, m_stress, m_strain, a_stress, a_strain):
+        obs = {
+            "Grid": grid.astype(np.float32),
+            "Stresses": np.array([m_stress, m_strain, a_stress, a_strain], dtype=np.float32)
+        }
         return obs
 
     def reset(self, seed=None):

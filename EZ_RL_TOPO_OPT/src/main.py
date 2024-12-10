@@ -1,13 +1,14 @@
 import design_space_funcs as dsf
 import FEM as fem
 import RL_Env as rl
+import feature_extractor as fe
 from stable_baselines3.common.env_checker import check_env
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import ProgressBarCallback
+import torch
 
 num_envs = 8
-
 
 def FEM_test():
     width = int(input("Enter grid width: "))
@@ -34,7 +35,8 @@ def FEM_test():
     fem.plot_mesh(a, b)
 
     # Call the FEM function
-    init_max_stress, init_max_strain, avg_u1, avg_u2, element_count, init_average_stress, init_average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = True)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    init_max_stress, init_max_strain, avg_u1, avg_u2, element_count, init_average_stress, init_average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag=True, device=device)
 
     bad = False
     good = True
@@ -78,17 +80,22 @@ def reinforcement_learning_test():
 
     # Create the vectorized environment
     env = SubprocVecEnv([rl.make_env(height, width, bounded, loaded) for _ in range(num_envs)])
+    env = VecMonitor(env)
     #env = rl.TopOptEnv(height, width, bounded, loaded)
     # Set up TensorBoard logger
     log_dir = "./tensorboard_logs/"
 
-
+    policy_kwargs = dict(
+        features_extractor_class=fe.CustomCombinedExtractor,
+        features_extractor_kwargs={}
+    )
     # Create the PPO model with the logger
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_dir)
+    model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device='cuda' if torch.cuda.is_available() else 'cpu')
 
     # Train the model
-    model.learn(total_timesteps=100000, progress_bar=True)
-
+    model.learn(total_timesteps=5e5, progress_bar=True)
+    
+    model.save("ppo_topopt")
 
     obs = env.reset()
     for i in range(1000):
@@ -96,16 +103,10 @@ def reinforcement_learning_test():
         obs, rewards, dones, info = env.step(action)
         env.render()
 
-
 def main():
     #Env_test()
     #FEM_test()
     reinforcement_learning_test()
-
-
-
-
-    
 
 if __name__ == "__main__":
     main()

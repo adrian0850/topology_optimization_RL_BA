@@ -27,11 +27,11 @@ def plot_mesh(nodes, conn, width=10, height=8):
         y = [-nodes[i][0] for i in element]  # Swap x and y and negate y
         plt.plot(x, y, 'b-')
     plt.scatter(nodes[:, 1], -nodes[:, 0], color='red', s=10)  # Swap x and y and negate y
-    
+
     # Add text annotations for each node
     for i, (x, y) in enumerate(nodes):
         plt.text(y, -x, str(i+1), fontsize=20, ha='right')
-    
+
     plt.axis('equal')
     plt.show()
 
@@ -48,7 +48,7 @@ def assemble_load(nodes, load, f):
     global_dof = 2 * node_index + dof - 1
     f[global_dof] += magnitude
 
-def FEM(nodes, conn, boundary, load, plot_flag):
+def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
     """
     Perform Finite Element Method (FEM) analysis on a given mesh.
 
@@ -184,7 +184,7 @@ def FEM(nodes, conn, boundary, load, plot_flag):
     #print(f'   max displacements: u1={max(u[0::2]):.4g}, u2={max(u[1::2]):.4g}')
     avg_u1 = np.mean(u[0::2])
     avg_u2 = np.mean(u[1::2])
-    
+
     emin = np.array([ 9.0e9,  9.0e9,  9.0e9])
     emax = np.array([-9.0e9, -9.0e9, -9.0e9])
     smin = np.array([ 9.0e9,  9.0e9,  9.0e9])
@@ -244,7 +244,7 @@ def FEM(nodes, conn, boundary, load, plot_flag):
             total_strain += strain.T[0]
             total_stress += stress.T[0]
 
-        
+
 
 
     # Calculate average strain and stress
@@ -259,8 +259,8 @@ def FEM(nodes, conn, boundary, load, plot_flag):
         # print(f'   average strains: e11={average_strain[0]:.4g}, e22={average_strain[1]:.4g}, e12={average_strain[2]:.4g}')
         # print(f'   average stress:  s11={average_stress[0]:.4g}, s22={average_stress[1]:.4g}, s12={average_stress[2]:.4g}')
         # print(f'   average strain/nodes:  s11={abs((average_stress[0])/len(conn))*10000:.4g}, s22={(abs(average_stress[1])/len(conn))*10000:.4g}, s12={(abs(average_stress[2])/len(conn))*10000:.4g}')
-        # print(f'   average strain/nodes:  e11={abs((average_strain[0])/len(conn))*10000:.4g}, e22={(abs(average_strain[1])/len(conn))*10000:.4g}, e12={(abs(average_strain[2])/len(conn))*10000:.4g}')    
-        
+        # print(f'   average strain/nodes:  e11={abs((average_strain[0])/len(conn))*10000:.4g}, e22={(abs(average_strain[1])/len(conn))*10000:.4g}, e12={(abs(average_strain[2])/len(conn))*10000:.4g}')
+
         ##############################
         # print('\n** Plot displacement')
         xvec = []
@@ -284,7 +284,7 @@ def FEM(nodes, conn, boundary, load, plot_flag):
             tri.append([c[0], c[1], c[2]])  # First triangle
             tri.append([c[0], c[2], c[3]])  # Second triangle
         t = plt.tricontourf(xvec, yvec, res, triangles=tri, levels=14, cmap=plt.get_cmap('jet'))
-        
+
         # Plot bounded nodes
         for b in boundary:
             node_index = b[0]
@@ -305,7 +305,7 @@ def FEM(nodes, conn, boundary, load, plot_flag):
                 plt.quiver(xvec[node_index], yvec[node_index], magnitude, 0, angles='xy', scale_units='xy', scale=1, color='k', width=arrow_width, label='Loaded Node' if l == load[0] else "")
             elif direction == 1:  # Load in y-direction
                 plt.quiver(xvec[node_index], yvec[node_index], 0, -magnitude, angles='xy', scale_units='xy', scale=1, color='k', width=arrow_width, label='Loaded Node' if l == load[0] else "")
-            
+
             # Add annotation for the magnitude of the force
             plt.annotate(f'{l[2]:.2f}', (xvec[node_index], yvec[node_index]), textcoords="offset points", xytext=(5,5), ha='center', color='k')
 
@@ -316,7 +316,7 @@ def FEM(nodes, conn, boundary, load, plot_flag):
         plt.axis('equal')
         plt.show()
         print('Done.')
-            
+
     if np.isnan(smax).any() or np.isnan(emax).any() or np.isnan(avg_u1).any() or np.isnan(avg_u2).any() or np.isnan(average_stress).any() or np.isnan(average_strain).any():
         print("NaN detected in FEM results")
 
@@ -324,3 +324,189 @@ def FEM(nodes, conn, boundary, load, plot_flag):
     max_stress, max_strain = get_max_stress_and_strain(smax, smin, emax, emin)
     return  max_stress, max_strain, avg_u1, avg_u2, len(conn), np.max(average_stress), np.max(average_strain), np.max(u[0::2]), np.max(u[1::2]), avg_strain_over_nodes
 
+# import math
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import torch
+
+# def shape(xi):
+#     xi, eta = tuple(xi)
+#     N = [(1.0 - xi) * (1.0 - eta), (1.0 + xi) * (1.0 - eta), (1.0 + xi) * (1.0 + eta), (1.0 - xi) * (1.0 + eta)]
+#     return 0.25 * np.array(N)
+
+# def gradshape(xi, device='cpu'):
+#     xi, eta = tuple(xi)
+#     dN = [[-(1.0 - eta), (1.0 - eta), (1.0 + eta), -(1.0 + eta)],
+#           [-(1.0 - xi), -(1.0 + xi), (1.0 + xi), (1.0 - xi)]]
+#     return 0.25 * torch.tensor(dN, dtype=torch.float32, device=device)
+
+# def plot_mesh(nodes, conn, width=10, height=8):
+#     nodes = np.array(nodes)
+#     plt.figure(figsize=(width, height))
+#     for element in conn:
+#         x = [nodes[i][1] for i in element]
+#         y = [-nodes[i][0] for i in element]
+#         plt.plot(x, y, 'b-')
+#     plt.scatter(nodes[:, 1], -nodes[:, 0], color='red', s=10)
+#     for i, (x, y) in enumerate(nodes):
+#         plt.text(y, -x, str(i + 1), fontsize=20, ha='right')
+#     plt.axis('equal')
+#     plt.show()
+
+# def get_max_stress_and_strain(smax, smin, emax, emin):
+#     max_stress = torch.max(torch.abs(torch.cat((smax, smin))))
+#     max_strain = torch.max(torch.abs(torch.cat((emax, emin))))
+#     return max_stress, max_strain
+
+# def assemble_load(nodes, load, f):
+#     for load_data in load:
+#         node_index = load_data[0]
+#         dof = load_data[1]
+#         magnitude = load_data[2]
+#         global_dof = 2 * node_index + dof - 1
+#         f[global_dof] += magnitude
+
+# def FEM(nodes, conn, boundary, load, plot_flag, device='cpu'):
+#     nodes = torch.tensor(nodes, dtype=torch.float32, device=device)
+#     num_nodes = len(nodes)
+#     E = 100.0
+#     v = 0.3
+#     C = E / (1.0 + v) / (1.0 - 2.0 * v) * torch.tensor([[1.0 - v, v, 0.0], [v, 1.0 - v, 0.0], [0.0, 0.0, 0.5 - v]], device=device)
+#     K = torch.zeros((2 * num_nodes, 2 * num_nodes), device=device)
+#     q4 = torch.tensor([[-1, -1], [1, -1], [-1, 1], [1, 1]], dtype=torch.float32, device=device) / math.sqrt(3.0)
+#     B = torch.zeros((3, 8), device=device)
+#     for c in conn:
+#         nodePts = nodes[c, :]
+#         Ke = torch.zeros((8, 8), device=device)
+#         for q in q4:
+#             dN = gradshape(q, device=device)
+#             J = torch.matmul(dN, nodePts).T
+#             dN = torch.matmul(torch.inverse(J), dN)
+#             B[0, 0::2] = dN[0, :]
+#             B[1, 1::2] = dN[1, :]
+#             B[2, 0::2] = dN[1, :]
+#             B[2, 1::2] = dN[0, :]
+#             Ke += torch.matmul(torch.matmul(B.T, C), B) * torch.det(J)
+#         for i, I in enumerate(c):
+#             for j, J in enumerate(c):
+#                 K[2 * I, 2 * J] += Ke[2 * i, 2 * j]
+#                 K[2 * I + 1, 2 * J] += Ke[2 * i + 1, 2 * j]
+#                 K[2 * I + 1, 2 * J + 1] += Ke[2 * i + 1, 2 * j + 1]
+#                 K[2 * I, 2 * J + 1] += Ke[2 * i, 2 * j + 1]
+#     f = torch.zeros((2 * num_nodes), device=device)
+#     assemble_load(nodes, load, f)
+#     for i in range(len(boundary)):
+#         nn = boundary[i][0]
+#         dof = boundary[i][1]
+#         val = boundary[i][2]
+#         j = 2 * nn
+#         if dof == 2:
+#             j = j + 1
+#         K[j, :] = 0.0
+#         K[j, j] = 1.0
+#         f[j] = val
+#     u = torch.linalg.solve(K, f)
+#     node_strain = torch.zeros((num_nodes, 3), device=device)
+#     node_stress = torch.zeros((num_nodes, 3), device=device)
+#     avg_u1 = torch.mean(u[0::2])
+#     avg_u2 = torch.mean(u[1::2])
+#     emin = torch.tensor([9.0e9, 9.0e9, 9.0e9], device=device)
+#     emax = torch.tensor([-9.0e9, -9.0e9, -9.0e9], device=device)
+#     smin = torch.tensor([9.0e9, 9.0e9, 9.0e9], device=device)
+#     smax = torch.tensor([-9.0e9, -9.0e9, -9.0e9], device=device)
+#     total_strain = torch.zeros(3, device=device)
+#     total_stress = torch.zeros(3, device=device)
+#     num_elements = len(conn)
+#     for c in conn:
+#         nodePts = nodes[c, :]
+#         for q in q4:
+#             dN = gradshape(q, device=device)
+#             J = torch.matmul(dN, nodePts).T
+#             dN = torch.matmul(torch.inverse(J), dN)
+#             B[0, 0::2] = dN[0, :]
+#             B[1, 1::2] = dN[1, :]
+#             B[2, 0::2] = dN[1, :]
+#             B[2, 1::2] = dN[0, :]
+#             UU = torch.zeros((8, 1), device=device)
+#             UU[0] = u[2 * c[0]]
+#             UU[1] = u[2 * c[0] + 1]
+#             UU[2] = u[2 * c[1]]
+#             UU[3] = u[2 * c[1] + 1]
+#             UU[4] = u[2 * c[2]]
+#             UU[5] = u[2 * c[2] + 1]
+#             UU[6] = u[2 * c[3]]
+#             UU[7] = u[2 * c[3] + 1]
+#             strain = torch.matmul(B, UU)
+#             stress = torch.matmul(C, strain)
+#             emin = torch.min(emin, strain.T[0])
+#             emax = torch.max(emax, strain.T[0])
+#             node_strain[c[0], :] = strain.T[0]
+#             node_strain[c[1], :] = strain.T[0]
+#             node_strain[c[2], :] = strain.T[0]
+#             node_strain[c[3], :] = strain.T[0]
+#             node_stress[c[0], :] = stress.T[0]
+#             node_stress[c[1], :] = stress.T[0]
+#             node_stress[c[2], :] = stress.T[0]
+#             node_stress[c[3], :] = stress.T[0]
+#             smax = torch.max(smax, stress.T[0])
+#             smin = torch.min(smin, stress.T[0])
+#             total_strain += strain.T[0]
+#             total_stress += stress.T[0]
+#     average_strain = total_strain / num_elements
+#     average_stress = total_stress / num_elements
+#     if plot_flag:
+#         xvec = []
+#         yvec = []
+#         res = []
+#         plot_type = 'e11'
+#         for ni, pt in enumerate(nodes):
+#             xvec.append(pt[1].item() + u[2 * ni + 1].item())
+#             yvec.append(-(pt[0].item() + u[2 * ni].item()))
+#             if plot_type == 'u1':
+#                 res.append(u[2 * ni].item())
+#             if plot_type == 'u2':
+#                 res.append(u[2 * ni + 1].item())
+#             if plot_type == 's11':
+#                 res.append(node_stress[ni][0].item())
+#             if plot_type == 's22':
+#                 res.append(node_stress[ni][1].item())
+#             if plot_type == 's12':
+#                 res.append(node_stress[ni][2].item())
+#             if plot_type == 'e11':
+#                 res.append(node_strain[ni][0].item())
+#             if plot_type == 'e22':
+#                 res.append(node_strain[ni][1].item())
+#             if plot_type == 'e12':
+#                 res.append(node_strain[ni][2].item())
+#         tri = []
+#         for c in conn:
+#             tri.append([c[0], c[1], c[2]])
+#             tri.append([c[0], c[2], c[3]])
+#         t = plt.tricontourf(xvec, yvec, res, triangles=tri, levels=14, cmap=plt.get_cmap('jet'))
+#         for b in boundary:
+#             node_index = b[0]
+#             plt.plot(xvec[node_index], yvec[node_index], 'ro', markersize=5, label='Bounded Node' if b == boundary[0] else "")
+#         arrow_scale = 10
+#         arrow_width = 0.010
+#         max_magnitude = max(abs(l[2]) for l in load)
+#         for l in load:
+#             node_index = l[0]
+#             direction = l[1]
+#             magnitude = l[2] / max_magnitude
+#             if direction == 2:
+#                 plt.quiver(xvec[node_index], yvec[node_index], magnitude, 0, angles='xy', scale_units='xy', scale=1, color='k', width=arrow_width, label='Loaded Node' if l == load[0] else "")
+#             elif direction == 1:
+#                 plt.quiver(xvec[node_index], yvec[node_index], 0, -magnitude, angles='xy', scale_units='xy', scale=1, color='k', width=arrow_width, label='Loaded Node' if l == load[0] else "")
+#             plt.annotate(f'{l[2]:.2f}', (xvec[node_index], yvec[node_index]), textcoords="offset points", xytext=(5, 5), ha='center', color='k')
+#         plt.scatter(xvec, yvec, marker='o', c='b', s=0.5)
+#         plt.grid(False)
+#         plt.colorbar(t)
+#         plt.title(plot_type)
+#         plt.axis('equal')
+#         plt.show()
+#         print('Done.')
+#     if torch.isnan(smax).any() or torch.isnan(emax).any() or torch.isnan(avg_u1).any() or torch.isnan(avg_u2).any() or torch.isnan(average_stress).any() or torch.isnan(average_strain).any():
+#         print("NaN detected in FEM results")
+#     avg_strain_over_nodes = max(abs((average_strain[0]) / len(conn)) * 10000, abs((average_strain[1]) / len(conn)) * 10000, abs((average_strain[2]) / len(conn)) * 10000)
+#     max_stress, max_strain = get_max_stress_and_strain(smax, smin, emax, emin)
+#     return max_stress.item(), max_strain.item(), avg_u1.item(), avg_u2.item(), len(conn), torch.max(average_stress).item(), torch.max(average_strain).item(), torch.max(u[0::2]).item(), torch.max(u[1::2]).item(), avg_strain_over_nodes.item()

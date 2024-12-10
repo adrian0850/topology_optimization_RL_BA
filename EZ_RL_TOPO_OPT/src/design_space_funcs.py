@@ -153,7 +153,7 @@ def encode_bounded_elements(grid, coordinate_list):
     return grid
 
 def create_grid(height, width, bounded, loaded):
-    grid = np.zeros((4, height, width))
+    grid = np.zeros((4, height, width), dtype=np.float32)
     grid[0, :, :] = 1
     grid = encode_bounded_elements(grid, bounded)
     grid = encode_loaded_nodes(grid, loaded)
