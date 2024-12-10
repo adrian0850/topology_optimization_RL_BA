@@ -28,9 +28,9 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
 
 def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain):
     a,b,c,d = dsf.extract_fem_data(grid)
-
+    #fem.plot_mesh(a, b)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, device=device)
+    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, grid=grid, device=device)
     reward = reward_function(grid, init_stress, max_stress, init_strain, max_strain, init_avg_stress, average_stress, init_avg_strain, average_strain)
 
     return reward, max_stress, max_strain, average_stress, average_strain
@@ -38,7 +38,7 @@ def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain)
 def get_needed_fem_values(grid):
     a,b,c,d = dsf.extract_fem_data(grid)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, device=device)
+    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, grid = grid, device=device)
     return max_stress, max_strain, average_stress, average_strain
 
 def get_observation_space(height, width):
@@ -68,7 +68,7 @@ def get_observation_space(height, width):
 class TopOptEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, height, width, bounded=[(0, 0), (-1, 0)], loaded =[(-1, -1, "LY20")], mode="train", threshold=0.3, ):
+    def __init__(self, height, width, bounded=[(0, 0), (-1, 0)], loaded =[(-1, -1, "LY20")], mode="train", threshold=0.3, render_mode="human"):
         self.mode = mode
         self.threshold = threshold
         self.height = height
@@ -128,13 +128,24 @@ class TopOptEnv(gym.Env):
             self.bounded = self.get_random_bounded(self.height, self.width, self.loaded)
             self.grid = dsf.create_grid(self.height, self.width, self.bounded, self.loaded)
             self.init_max_stress, self.init_max_strain, self.init_avg_stress, self.init_avg_strain = get_needed_fem_values(self.grid)
-        self.grid = dsf.create_grid(self.height, self.width, self.bounded, self.loaded)
+        else:
+            self.loaded = self.loaded
+            self.bounded = self.bounded
+            self.grid = dsf.create_grid(self.height, self.width, self.bounded, self.loaded)
         self.step_count = 0
         self.reward = 0
         self.obs = self.create_observation(self.grid, self.init_max_stress, self.init_max_strain, self.init_avg_stress, self.init_avg_strain)
 
         return self.obs, self.get_info()
 
+    def print(self, mode="human"):
+        if mode == "human":
+            print(self.grid)
+            a, b, c, d = dsf.extract_fem_data(self.grid)
+            fem.plot_mesh(a, b)
+            fem.FEM(a, b, c, d, plot_flag=True, grid=self.grid)
+        elif mode == "rgb_array":
+            raise NotImplementedError
 
     def is_train(self):
         return self.mode == "train"
@@ -251,10 +262,14 @@ class TopOptEnv(gym.Env):
                 row, col = self.get_random_edge_coordinate(height, width)
                 if (row, col) in bounded:
                     continue
-                if any((row == lr and col == lc) or
-                       (row == lr + dr and col == lc + dc)
-                       for lr, lc, _ in loaded
-                       for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]):
+                # Check if the node is adjacent to any loaded node
+                is_adjacent_to_loaded = any(
+                    (row == lr and col == lc) or
+                    (row + dr == lr and col + dc == lc)
+                    for lr, lc, _ in loaded
+                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                )
+                if is_adjacent_to_loaded:
                     continue
                 bounded.append((row, col))
                 break

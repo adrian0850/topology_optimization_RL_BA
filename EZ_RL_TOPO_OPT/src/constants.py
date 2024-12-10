@@ -1,3 +1,5 @@
+import numpy as np
+
 HEIGHT = 3
 WIDTH = 3
 
@@ -59,3 +61,11 @@ LOADED_Y = 3
 """The Constant used to access the a which are loaded in the y direction"""
 
 BOUNDED_CHAR = "B"
+E = 100.0
+v = 0.3
+C_real = E / (1.0 + v) / (1.0 - 2.0 * v) * np.array([[1.0 - v, v, 0.0], [v, 1.0 - v, 0.0], [0.0, 0.0, 0.5 - v]])
+
+DUMMY_MATERIAL_E = 1e-6
+DUMMY_MATERIAL_V = 1
+
+C_dummy = DUMMY_MATERIAL_E / (1.0 + DUMMY_MATERIAL_V) / (1.0 - 2.0 * DUMMY_MATERIAL_V) * np.array([[1.0 - DUMMY_MATERIAL_V, DUMMY_MATERIAL_V, 0.0], [DUMMY_MATERIAL_V, 1.0 - DUMMY_MATERIAL_V, 0.0], [0.0, 0.0, 0.5 - DUMMY_MATERIAL_V]])

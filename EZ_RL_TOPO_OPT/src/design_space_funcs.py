@@ -56,7 +56,7 @@ def extract_fem_data(design_matrix):
     nodes, elements, node_map = extract_nodes_and_elements(design_matrix)
     boundary_conditions = extract_boundary_conditions(design_matrix, node_map)
     loads = extract_loads(design_matrix, node_map)
-    return (nodes, elements, boundary_conditions, loads)
+    return nodes, elements, boundary_conditions, loads
 
 def extract_nodes_and_elements(design):
     nodes = []
@@ -66,32 +66,35 @@ def extract_nodes_and_elements(design):
 
     existing_elements = set()  # Store unique element combinations
 
-    filled_indices = np.where(design[0,:,:] != 0)
 
-    for i, j in zip(*filled_indices):
-        # Define nodes for the filled pixel
-        pixel_nodes = [
-            (i, j), (i, j+1),
-            (i+1, j), (i+1, j+1)
-        ]
+    height, width = design.shape[1], design.shape[2]
 
-        for node in pixel_nodes:
-            if node not in node_map:
-                node_map[node] = node_id
-                nodes.append([float(node[0]), float(node[1])])
-                node_id += 1
+    for i in range(height):
+        for j in range(width):
+            # Define nodes for the pixel
+            pixel_nodes = [
+                (i, j), (i, j + 1),
+                (i + 1, j), (i + 1, j + 1)
+            ]
 
-        # Define elements by connecting nodes as two triangles
-        n1, n2, n3, n4 = (node_map[(i, j)], node_map[(i, j+1)],
-                         node_map[(i+1, j)], node_map[(i+1, j+1)])
+            for node in pixel_nodes:
+                if node not in node_map:
+                    node_map[node] = node_id
+                    nodes.append([float(node[0]), float(node[1])])
+                    node_id += 1
 
-        # Check if the element or its reversed version already exists
-        element_tuple = tuple(sorted([n1, n2, n3, n4]))
-        if element_tuple not in existing_elements:
-            # Create two triangles
-            elements.append([n1, n3, n4, n1])  # Triangle 1
-            elements.append([n1, n4, n2, n1])  # Triangle 2
-            existing_elements.add(element_tuple)
+            # Define elements by connecting nodes as two triangles
+            n1, n2, n3, n4 = (node_map[(i, j)], node_map[(i, j + 1)],
+                            node_map[(i + 1, j)], node_map[(i + 1, j + 1)])
+
+            # Check if the element or its reversed version already exists
+            element_tuple = tuple(sorted([n1, n2, n3, n4]))
+            if element_tuple not in existing_elements:
+                # Create two triangles with a flag indicating if they are voided
+                is_voided = design[0, i, j] == 0
+                elements.append([n1, n3, n4, n1, is_voided])  # Triangle 1
+                elements.append([n1, n4, n2, n1, is_voided])  # Triangle 2
+                existing_elements.add(element_tuple)
 
     return nodes, elements, node_map
 
