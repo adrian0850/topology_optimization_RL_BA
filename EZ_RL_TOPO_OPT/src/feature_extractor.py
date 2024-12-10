@@ -44,6 +44,7 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
 
         # self.extractors contain nn.Modules that do all the processing.
         for key, extractor in self.extractors.items():
-            encoded_tensor_list.append(extractor(observations[key]))
+            input_tensor = observations[key].to(next(extractor.parameters()).device)
+            encoded_tensor_list.append(extractor(input_tensor))
         # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
         return th.cat(encoded_tensor_list, dim=1)

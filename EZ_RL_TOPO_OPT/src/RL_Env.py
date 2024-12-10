@@ -12,7 +12,7 @@ import FEM as fem
 def reward_function(design, initial_max_stress, current_max_stress, initial_max_strain, current_max_strain, initial_avg_stress, current_avg_stress, initial_avg_strain, current_avg_strain):
     # Calculate the ratio of initial to current number of elements
     initial_num_elements = np.size(design)
-    current_num_elements = np.size(np.where(design != 0))
+    current_num_elements = np.count_nonzero(design[0, :, :])
 
     element_ratio = (initial_num_elements / current_num_elements) ** 2
     w_max_stress = 4
@@ -88,13 +88,14 @@ class TopOptEnv(gym.Env):
         self.observation_space = get_observation_space(self.height, self.width)
         self.step_count = 0
         self.reward = 0
+        self.accumulated_reward = 0
 
     def step(self, action):
         self.step_count += 1
         terminated = False
         truncated = False
         if self.is_illegal_action(action, verbose=self.is_eval()):
-            self.reward = -10
+            self.reward = -100 - self.accumulated_reward
             terminated = True
             
         else:
@@ -102,7 +103,7 @@ class TopOptEnv(gym.Env):
             try:
                 self.reward, max_stress, max_strain, avg_stress, avg_strain = get_reward(self.grid, self.init_max_stress, self.init_max_strain, self.init_avg_stress, self.init_avg_strain)
             except LinAlgError:
-                self.reward = -10
+                self.reward = -100 - self.accumulated_reward
                 terminated = True
             if self.get_constraint(self.grid) < self.threshold:
                 terminated = True
@@ -110,6 +111,7 @@ class TopOptEnv(gym.Env):
                 if self.mode == "train":
                     self.reward = self.reward*2
                 self.obs = self.create_observation(self.grid, max_stress, max_strain, avg_stress, avg_strain)
+        self.accumulated_reward += self.reward
         #print("Reward: ", self.reward)
         return self.obs, self.reward, terminated, truncated, self.get_info()
     
@@ -244,15 +246,15 @@ class TopOptEnv(gym.Env):
     def get_random_bounded(self, height, width, loaded):
         bounded = []
         num_bounded = self.get_random_number(1, max(height, width))
-        for i in range(num_bounded):
+        for _ in range(num_bounded):
             while True:
                 row, col = self.get_random_edge_coordinate(height, width)
                 if (row, col) in bounded:
                     continue
                 if any((row == lr and col == lc) or
-                    (row == lr + dr and col == lc + dc)
-                    for lr, lc, _ in loaded
-                    for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]):
+                       (row == lr + dr and col == lc + dc)
+                       for lr, lc, _ in loaded
+                       for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]):
                     continue
                 bounded.append((row, col))
                 break
