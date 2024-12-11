@@ -41,8 +41,8 @@ def FEM_test():
     bad = False
     good = False
 
-    bad = True
-    #good = True
+    #bad = True
+    good = True
     # Modify the grid
     if bad:
         dsf.remove_material(grid, -2, -1)

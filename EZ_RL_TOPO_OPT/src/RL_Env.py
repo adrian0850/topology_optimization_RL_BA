@@ -30,7 +30,7 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
 
 def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain):
     a,b,c,d = dsf.extract_fem_data(grid)
-    #fem.plot_mesh(a, b)
+    fem.plot_mesh(a, b)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = True, grid=grid, device=device)
     reward = reward_function(grid, init_stress, max_stress, init_strain, max_strain, init_avg_stress, average_stress, init_avg_strain, average_strain)
