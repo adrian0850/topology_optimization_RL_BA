@@ -127,9 +127,9 @@ def load_test():
 
 def main():
     #Env_test()
-    #FEM_test()
+    FEM_test()
     #reinforcement_learning_test()
-    load_test()
+    #load_test()
 
 if __name__ == "__main__":
     main()

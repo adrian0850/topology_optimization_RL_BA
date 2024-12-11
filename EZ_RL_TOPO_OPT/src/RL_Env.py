@@ -14,7 +14,7 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
     initial_num_elements = np.size(design)
     current_num_elements = np.count_nonzero(design[0, :, :])
 
-    element_ratio = (initial_num_elements / current_num_elements) ** 2
+    element_ratio = (initial_num_elements / current_num_elements)
     w_max_stress = 4
     w_max_strain = 4
     # Calculate the ratios of initial to current stress and strain values
@@ -22,7 +22,9 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
     strain_ratio = (initial_max_strain / current_max_strain) * w_max_strain + (initial_avg_strain / current_avg_strain)
 
     # Combine the ratios and square the result
-    reward = element_ratio * (stress_ratio + strain_ratio) ** 2
+    reward = (stress_ratio + strain_ratio) ** 2
+
+    reward = 100*reward / (10 + reward)
 
     return reward
 
@@ -30,7 +32,7 @@ def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain)
     a,b,c,d = dsf.extract_fem_data(grid)
     #fem.plot_mesh(a, b)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, grid=grid, device=device)
+    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = True, grid=grid, device=device)
     reward = reward_function(grid, init_stress, max_stress, init_strain, max_strain, init_avg_stress, average_stress, init_avg_strain, average_strain)
 
     return reward, max_stress, max_strain, average_stress, average_strain
