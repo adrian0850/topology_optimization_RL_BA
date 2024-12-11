@@ -41,8 +41,8 @@ def FEM_test():
     bad = False
     good = False
 
-    bad = True
-    #good = True
+    #bad = True
+    good = True
     # Modify the grid
     if bad:
         dsf.remove_material(grid, -2, -1)
@@ -93,7 +93,7 @@ def reinforcement_learning_test():
     model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device='cuda' if torch.cuda.is_available() else 'cpu')
 
     # Train the model
-    model.learn(total_timesteps=5e6, progress_bar=True)
+    model.learn(total_timesteps=1000, progress_bar=True)
     
     model.save("ppo_topopt")
 
@@ -127,8 +127,8 @@ def load_test():
 
 def main():
     #Env_test()
-    #FEM_test()
-    reinforcement_learning_test()
+    FEM_test()
+    #reinforcement_learning_test()
     #load_test()
 
 if __name__ == "__main__":
