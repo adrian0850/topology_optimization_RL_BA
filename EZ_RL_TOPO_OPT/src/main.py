@@ -246,6 +246,7 @@ def test_cnn():
     print("CNN Structure:")
     for key, extractor in feature_extractor.extractors.items():
         print(f"Extractor for key: {key}")
+        extractor.to(device)
         summary(extractor, input_size=env.observation_space[key].shape, device=device)
 
     # Get a sample observation
@@ -264,6 +265,8 @@ def test_cnn():
     # Print the extracted features
     print("Extracted Features Shape:", features.shape)
     print("Extracted Features:", features)
+
+    feature_extractor.visualize_feature_maps()
 
     # Check value ranges
     min_val = features.min().item()
