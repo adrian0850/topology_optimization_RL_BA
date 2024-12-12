@@ -32,29 +32,9 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3 import PPO
 import torch
 
-NUM_ENVS = 8
+num_envs = 10
 
-def fem_test():
-    """
-    A function to test Finite Element Method (FEM) on a grid with specified 
-    dimensions and boundary conditions.
-    This function performs the following steps:
-    1. Prompts the user to input the grid width and height.
-    2. Defines the boundary conditions and loads.
-    3. Creates a grid using the specified dimensions and boundary conditions.
-    4. Extracts FEM data from the grid.
-    5. Plots the mesh of the grid.
-    6. Calls the FEM function to compute initial stress and strain values.
-    7. Modifies the grid based on predefined conditions and calculates the 
-    reward after each modification.
-    Inputs:
-    - Grid width and height from user input.
-    Outputs:
-    - Prints the created grid.
-    - Prints nodes, elements, bounded, and loaded data.
-    - Plots the mesh.
-    - Prints the reward after each grid modification.
-    """
+def FEM_test():
     width = int(input("Enter grid width: "))
     height = int(input("Enter grid height: "))
 
@@ -203,8 +183,24 @@ def load_test():
 
     bounded = [(0, 0), (-1, 0)]
     loaded = [(-1, -1, "LY50")]
-    env = rl.TopOptEnv(height, width, bounded, loaded, mode="eval")
+
+    env = SubprocVecEnv([rl.make_env(height, width, bounded, loaded) for _ in range(num_envs)])
+
+    env = VecMonitor(env)
+    #env = rl.TopOptEnv(height, width, bounded, loaded)
+    # Set up TensorBoard logger
+    log_dir = "./tensorboard_logs/"
+
+    policy_kwargs = dict(
+        features_extractor_class=fe.CustomCombinedExtractor,
+        features_extractor_kwargs={}
+    )
+    # Create the PPO model with the logger
     model = PPO.load("ppo_topopt", env = env)
+
+    # Train the model
+    model.learn(total_timesteps=1e6, progress_bar=True, tb_log_name="PPO_33", reset_num_timesteps=False)
+
     obs, _ = env.reset()
     for i in range(20):
         action, _states = model.predict(obs)
