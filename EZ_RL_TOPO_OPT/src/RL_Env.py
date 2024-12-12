@@ -231,9 +231,9 @@ class TopOptEnv(gym.Env):
         negative_bool = self.get_random_number(0, 1)
         x_or_y = self.get_random_number(0, 1)
         if negative_bool == 0:
-            load_value = self.get_random_number(10, 100)
+            load_value = self.get_random_number(10, 80)
         else:
-            load_value = -self.get_random_number(10, 100)
+            load_value = -self.get_random_number(10, 80)
         if x_or_y == 0:
             loaded.append((row, col, "LX" + str(load_value)))
         else:
