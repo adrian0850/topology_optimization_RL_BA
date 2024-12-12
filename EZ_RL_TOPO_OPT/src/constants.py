@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 HEIGHT = 3
 WIDTH = 3
@@ -69,3 +70,6 @@ DUMMY_MATERIAL_E = 1e-6
 DUMMY_MATERIAL_V = 1
 
 C_dummy = DUMMY_MATERIAL_E / (1.0 + DUMMY_MATERIAL_V) / (1.0 - 2.0 * DUMMY_MATERIAL_V) * np.array([[1.0 - DUMMY_MATERIAL_V, DUMMY_MATERIAL_V, 0.0], [DUMMY_MATERIAL_V, 1.0 - DUMMY_MATERIAL_V, 0.0], [0.0, 0.0, 0.5 - DUMMY_MATERIAL_V]])
+
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+#DEVICE = "cpu"
