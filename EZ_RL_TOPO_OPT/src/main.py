@@ -32,7 +32,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3 import PPO
 import torch
 
-num_envs = 10
+NUM_ENVS = 10
 
 def FEM_test():
     width = int(input("Enter grid width: "))
