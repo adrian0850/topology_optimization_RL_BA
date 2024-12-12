@@ -8,8 +8,8 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim=1)
 
         extractors = {}
-
         total_concat_size = 0
+
         # We need to know the size of the output of this extractor,
         # so go over all the spaces and compute output feature sizes
         for key, subspace in observation_space.spaces.items():
@@ -45,6 +45,14 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         # self.extractors contain nn.Modules that do all the processing.
         for key, extractor in self.extractors.items():
             input_tensor = observations[key].to(next(extractor.parameters()).device)
+            if key == "Grid":
+                # Normalize the third and fourth channels of the grid
+                input_tensor[:, 2, :, :] = (input_tensor[:, 2, :, :] + 80) / 160
+                input_tensor[:, 3, :, :] = (input_tensor[:, 3, :, :] + 80) / 160
+                # Multiply the first and second channels by 255
+                input_tensor[:, 0, :, :] *= 255
+                input_tensor[:, 1, :, :] *= 255
             encoded_tensor_list.append(extractor(input_tensor))
+
         # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
         return th.cat(encoded_tensor_list, dim=1)
