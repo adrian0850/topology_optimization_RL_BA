@@ -15,25 +15,27 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
         # so go over all the spaces and compute output feature sizes
         for key, subspace in observation_space.spaces.items():
             if key == "Grid":
-                # Process the grid image
                 extractors[key] = nn.Sequential(
-                    nn.Conv2d(subspace.shape[0], 32, kernel_size=3, stride=1, padding=1),
+                    nn.Conv2d(subspace.shape[0], 16, kernel_size=3, stride=1, padding=1),
                     nn.ReLU(),
-                    nn.MaxPool2d(kernel_size=2, stride=2),
+                    nn.Conv2d(16, 8, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                    nn.Conv2d(8, 4, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
+                    nn.Conv2d(4, 1, kernel_size=3, stride=1, padding=1),
+                    nn.ReLU(),
                     nn.Flatten()
                 )
-                # Calculate the size after convolution and pooling
-                conv_output_size = (subspace.shape[1] // 2) * (subspace.shape[2] // 2) * 32
+                conv_output_size = subspace.shape[1] * subspace.shape[2]
                 total_concat_size += conv_output_size
             elif key == "Stresses":
-                # Process the vector of stresses and strain
                 extractors[key] = nn.Sequential(
                     nn.Linear(subspace.shape[0], 64),
                     nn.ReLU(),
-                    nn.Linear(64, 16),
+                    nn.Linear(64, 32),
                     nn.ReLU()
                 )
-                total_concat_size += 16
+                total_concat_size += 32
 
         self.extractors = nn.ModuleDict(extractors)
 
