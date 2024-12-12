@@ -30,11 +30,26 @@ import feature_extractor as fe
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecMonitor
 from stable_baselines3 import PPO
+import matplotlib.pyplot as plt
 import torch
+from torchsummary import summary
+import constants as const
+import random
+import numpy as np
 
-NUM_ENVS = 10
+NUM_ENVS = 1
 
-def FEM_test():
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+def fem_test():
     width = int(input("Enter grid width: "))
     height = int(input("Enter grid height: "))
 
@@ -68,8 +83,8 @@ def FEM_test():
     bad = False
     good = False
 
-    #bad = True
-    good = True
+    bad = True
+    #good = True
     # Modify the grid
     if bad:
         dsf.remove_material(grid, -2, -1)
@@ -209,12 +224,77 @@ def load_test():
         obs, rewards, dones, _, info = env.step(action)
         env.print()
 
+def test_cnn():
+    set_seed(42)
+    # Get grid dimensions from user input
+    width = int(input("Enter grid width: "))
+    height = int(input("Enter grid height: "))
+
+    # Define bounded and loaded points
+    bounded = [(0, 0), (-1, 0)]
+    loaded = [(-1, -1, "LY50")]
+
+    # Instantiate your actual topology optimization environment
+    env = rl.make_env(height, width, bounded, loaded, mode="eval")()
+
+    # Instantiate the feature extractor
+    feature_extractor = fe.CustomCombinedExtractor(env.observation_space)
+
+    device = const.DEVICE
+
+
+    print("CNN Structure:")
+    for key, extractor in feature_extractor.extractors.items():
+        print(f"Extractor for key: {key}")
+        summary(extractor, input_size=env.observation_space[key].shape, device=device)
+
+    # Get a sample observation
+    sample_observation, _ = env.reset()
+    print(env.grid)
+    #Convert the sample observation to a PyTorch tensor
+    sample_observation_tensor = {
+        key: torch.tensor(value).unsqueeze(0) for key, value in sample_observation.items()
+    }
+    # print(sample_observation_tensor)
+
+    # Pass the sample observation through the feature extractor
+    features = feature_extractor(sample_observation_tensor)
+    feature_extractor.to(device)
+
+    # Print the extracted features
+    print("Extracted Features Shape:", features.shape)
+    print("Extracted Features:", features)
+
+    # Check value ranges
+    min_val = features.min().item()
+    max_val = features.max().item()
+    print("Min value in features:", min_val)
+    print("Max value in features:", max_val)
+
+    # Plot histogram of feature values
+    features_np = features.detach().cpu().numpy().flatten()
+    plt.hist(features_np, bins=50, color='blue', alpha=0.7)
+    plt.title("Distribution of Extracted Features")
+    plt.xlabel("Feature Value")
+    plt.ylabel("Frequency")
+    plt.show()
+
+    # Visualize features as an image
+    # Reshape the features to a 2D array for visualization
+    features_np = features.detach().cpu().numpy().reshape(1, -1)
+    plt.imshow(features_np, aspect='auto', cmap='viridis')
+    plt.colorbar()
+    plt.title("Extracted Features Heatmap")
+    plt.xlabel("Feature Index")
+    plt.ylabel("Batch Index")
+    plt.show()
 
 def main():
     #Env_test()
     #fem_test()
     reinforcement_learning_test()
     #load_test()
+    #test_cnn()
 
 if __name__ == "__main__":
     main()

@@ -2,12 +2,15 @@ import design_space_funcs as dsf
 from numpy.linalg import LinAlgError
 import numpy as np
 import gymnasium as gym
+from gymnasium.spaces import Dict, Box
 import constants as const
 import random
 import torch
 import time
 
 import FEM as fem
+
+device = const.DEVICE
 
 def reward_function(design, initial_max_stress, current_max_stress, initial_max_strain, current_max_strain, initial_avg_stress, current_avg_stress, initial_avg_strain, current_avg_strain):
     # Calculate the ratio of initial to current number of elements
@@ -124,7 +127,7 @@ class TopOptEnv(gym.Env):
         }
         return obs
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
         if self.mode == "train":
             self.loaded = self.get_random_loaded(self.height, self.width)
             self.bounded = self.get_random_bounded(self.height, self.width, self.loaded)
@@ -287,3 +290,23 @@ def make_env(height, width, bounded, loaded, mode="train", threshold=0.3):
         env = TopOptEnv(height, width, bounded, loaded, mode, threshold)
         return env
     return _init
+
+
+class MockEnv(gym.Env):
+    def __init__(self):
+        super(MockEnv, self).__init__()
+        self.observation_space = Dict({
+            "Grid": Box(low=0, high=1, shape=(4, 64, 64), dtype=np.float32),
+            "Stresses": Box(low=-80, high=80, shape=(10,), dtype=np.float32)
+        })
+        self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+
+    def reset(self):
+        return {
+            "Grid": np.random.rand(4, 6, 12).astype(np.float32),
+            "Stresses": np.random.uniform(-80, 80, size=(10,)).astype(np.float32)
+        }
+
+    def step(self, action):
+        return self.reset(), 0, False, {}
+

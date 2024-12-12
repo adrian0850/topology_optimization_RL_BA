@@ -1,4 +1,5 @@
 import gymnasium as gym
+import numpy as np
 import torch as th
 from torch import nn
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -41,17 +42,19 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
 
     def forward(self, observations) -> th.Tensor:
         encoded_tensor_list = []
-
+        # converted_obs = {
+        #     key: th.tensor(value).unsqueeze(0) for key, value in observations.items()
+        # }
         # self.extractors contain nn.Modules that do all the processing.
         for key, extractor in self.extractors.items():
             input_tensor = observations[key].to(next(extractor.parameters()).device)
             if key == "Grid":
+                # print(input_tensor.shape)
+                # print(input_tensor)
                 # Normalize the third and fourth channels of the grid
                 input_tensor[:, 2, :, :] = (input_tensor[:, 2, :, :] + 80) / 160
                 input_tensor[:, 3, :, :] = (input_tensor[:, 3, :, :] + 80) / 160
                 # Multiply the first and second channels by 255
-                input_tensor[:, 0, :, :] *= 255
-                input_tensor[:, 1, :, :] *= 255
             encoded_tensor_list.append(extractor(input_tensor))
 
         # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
