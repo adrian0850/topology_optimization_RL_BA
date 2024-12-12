@@ -37,7 +37,7 @@ import constants as const
 import random
 import numpy as np
 
-NUM_ENVS = 1
+NUM_ENVS = 10
 
 def set_seed(seed):
     random.seed(seed)
