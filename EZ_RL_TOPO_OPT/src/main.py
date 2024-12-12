@@ -8,7 +8,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import ProgressBarCallback
 import torch
 
-num_envs = 8
+num_envs = 10
 
 def FEM_test():
     width = int(input("Enter grid width: "))
@@ -114,8 +114,24 @@ def load_test():
 
     bounded = [(0, 0), (-1, 0)]
     loaded = [(-1, -1, "LY50")]
-    env = rl.TopOptEnv(height, width, bounded, loaded, mode="eval")
+
+    env = SubprocVecEnv([rl.make_env(height, width, bounded, loaded) for _ in range(num_envs)])
+
+    env = VecMonitor(env)
+    #env = rl.TopOptEnv(height, width, bounded, loaded)
+    # Set up TensorBoard logger
+    log_dir = "./tensorboard_logs/"
+
+    policy_kwargs = dict(
+        features_extractor_class=fe.CustomCombinedExtractor,
+        features_extractor_kwargs={}
+    )
+    # Create the PPO model with the logger
     model = PPO.load("ppo_topopt", env = env)
+
+    # Train the model
+    model.learn(total_timesteps=1e6, progress_bar=True, tb_log_name="PPO_33", reset_num_timesteps=False)
+
     obs, _ = env.reset()
     for i in range(20):
         action, _states = model.predict(obs)
@@ -128,8 +144,8 @@ def load_test():
 def main():
     #Env_test()
     #FEM_test()
-    reinforcement_learning_test()
-    #load_test()
+    #reinforcement_learning_test()
+    load_test()
 
 if __name__ == "__main__":
     main()
