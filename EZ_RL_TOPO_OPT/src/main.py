@@ -295,9 +295,9 @@ def test_cnn():
 def main():
     #Env_test()
     #fem_test()
-    #reinforcement_learning_test()
+    reinforcement_learning_test()
     #load_test()
-    test_cnn()
+    #test_cnn()
 
 if __name__ == "__main__":
     main()
