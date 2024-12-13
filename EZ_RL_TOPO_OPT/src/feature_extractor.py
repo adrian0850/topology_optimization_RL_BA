@@ -1,11 +1,28 @@
 import gymnasium as gym
-import numpy as np
 import torch as th
 from torch import nn
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import matplotlib.pyplot as plt
 
 class CustomCombinedExtractor(BaseFeaturesExtractor):
+    """
+    Custom feature extractor that combines convolutional and linear layers to 
+    process different parts of the observation space.
+    Args:
+        observation_space (gym.spaces.Dict): The observation space containing 
+        different subspaces.
+    Attributes:
+        feature_maps (dict): Dictionary to store feature maps for visualization.
+        extractors (nn.ModuleDict): Dictionary of feature extractors for each subspace.
+        _features_dim (int): The dimension of the concatenated features.
+    Methods:
+        get_activation(name):
+            Registers a forward hook to capture the output of a layer.
+        forward(observations) -> th.Tensor:
+            Forward pass to extract and concatenate features from the observation space.
+        visualize_feature_maps():
+            Visualizes the feature maps stored in the feature_maps attribute.
+    """
     def __init__(self, observation_space: gym.spaces.Dict):
         super().__init__(observation_space, features_dim=1)
 
@@ -36,7 +53,7 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
                 for i, layer in enumerate(layers):
                     if isinstance(layer, nn.Conv2d):
                         layer.register_forward_hook(self.get_activation(f"{key}_conv{i}"))
-            
+
             elif key == "Stresses":
                 extractors[key] = nn.Sequential(
                     nn.Linear(subspace.shape[0], 64),
@@ -75,12 +92,12 @@ class CustomCombinedExtractor(BaseFeaturesExtractor):
 
         # Return a (B, self._features_dim) PyTorch tensor, where B is batch dimension.
         return th.cat(encoded_tensor_list, dim=1)
-    
+
     def visualize_feature_maps(self):
         for name, feature_map in self.feature_maps.items():
             num_channels = feature_map.shape[1]
             size = feature_map.shape[2]
-            fig, axes = plt.subplots(num_channels, 1, figsize=(2, num_channels * 2))
+            _, axes = plt.subplots(num_channels, 1, figsize=(2, num_channels * 2))
             if num_channels == 1:
                 axes = [axes]  # Ensure axes is always a list
             for i in range(num_channels):

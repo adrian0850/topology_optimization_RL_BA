@@ -196,7 +196,7 @@ def get_loaded_matrix(nelx, nely):
     if LOAD_VAR == "B_RIGHT":
         dof_pos = 2 * (nelx+1) * (nely+1) - 1
     elif LOAD_VAR == "B_MIDDLE":
-        dof_pos = 2*(nelx+1) * (nely) + 0.5*(nelx+1) - 1   
+        dof_pos = 2*(nelx+1) * (nely) + 0.5*(nelx+1) - 1
     elif LOAD_VAR == "B_LEFT":
         dof_pos = 2 * (nelx +1) * (nely) +1
     elif LOAD_VAR == "M_RIGHT":

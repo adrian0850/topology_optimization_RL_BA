@@ -6,6 +6,7 @@ from gymnasium.spaces import Dict, Box
 import constants as const
 import random
 import torch
+
 import time
 
 import FEM as fem
@@ -78,7 +79,7 @@ class TopOptEnv(gym.Env):
         self.threshold = threshold
         self.height = height
         self.width = width
-        
+
         if self.mode=="train":
             self.loaded = self.get_random_loaded(self.height, self.width)
             self.bounded = self.get_random_bounded(self.height, self.width,self.loaded)
@@ -88,7 +89,7 @@ class TopOptEnv(gym.Env):
 
         self.grid = dsf.create_grid(self.height, self.width, self.bounded, self.loaded)
         self.init_max_stress, self.init_max_strain, self.init_avg_stress, self.init_avg_strain = get_needed_fem_values(self.grid)
-        
+
         self.action_space = gym.spaces.Discrete(height * width)
         self.observation_space = get_observation_space(self.height, self.width)
         self.step_count = 0
@@ -291,22 +292,4 @@ def make_env(height, width, bounded, loaded, mode="train", threshold=0.3):
         return env
     return _init
 
-
-class MockEnv(gym.Env):
-    def __init__(self):
-        super(MockEnv, self).__init__()
-        self.observation_space = Dict({
-            "Grid": Box(low=0, high=1, shape=(4, 64, 64), dtype=np.float32),
-            "Stresses": Box(low=-80, high=80, shape=(10,), dtype=np.float32)
-        })
-        self.action_space = Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-
-    def reset(self):
-        return {
-            "Grid": np.random.rand(4, 6, 12).astype(np.float32),
-            "Stresses": np.random.uniform(-80, 80, size=(10,)).astype(np.float32)
-        }
-
-    def step(self, action):
-        return self.reset(), 0, False, {}
 
