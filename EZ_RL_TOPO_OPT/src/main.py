@@ -1,7 +1,6 @@
-
 import tests as test
 
-NUM_ENVS = 1
+NUM_ENVS = 10
 
 
 def main():
