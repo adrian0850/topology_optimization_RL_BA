@@ -1,6 +1,7 @@
 import numpy as np
 import constants as const
 
+
 def scale_matrix(matrix, target_rows, target_cols):
     """A function that scales a given matrix to a target size. 
     The scaling is done by repeating the elements of the matrix.
@@ -49,8 +50,6 @@ def scale_matrix(matrix, target_rows, target_cols):
             row.extend(row[:additional_cols])
     
     return np.array(scaled_matrix)
-
-
 
 def extract_fem_data(design_matrix):
     nodes, elements, node_map = extract_nodes_and_elements(design_matrix)
@@ -165,4 +164,26 @@ def create_grid(height, width, bounded, loaded):
 
 def remove_material(grid, row, col):
     grid[0,row,col] = 0
+    return grid
+
+def action_to_coordinates(self, element_id):
+    row, col = divmod(element_id, self.width)
+    return row, col
+
+def map_von_mises_stresses_to_grid(vm_stresses, grid):
+    rows, cols = grid[0,:,:].shape
+    von_mises_grid = np.zeros((rows, cols), dtype=np.float32)
+    max_vm = max(vm_stresses)
+    for i in range(rows):
+        for j in range(cols):
+            element_id = 2* (i * cols + j)
+            element_id_2 = element_id + 1
+            von_mises_grid[i, j] = (vm_stresses[element_id]+vm_stresses[element_id_2])/2
+    max_vm = max(von_mises_grid.flatten())
+    von_mises_grid = von_mises_grid / max_vm
+    return von_mises_grid
+
+def convert_grid_with_von_mises(grid, vm_stresses):
+    von_mises_grid = map_von_mises_stresses_to_grid(vm_stresses, grid)
+    grid[0,:,:] *= von_mises_grid
     return grid

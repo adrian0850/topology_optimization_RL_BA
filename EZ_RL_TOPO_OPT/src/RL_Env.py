@@ -29,7 +29,6 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
     reward = (stress_ratio + strain_ratio) ** 2
 
     reward = 100*reward / (10 + reward)
-
     return reward
 
 def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain):
@@ -291,5 +290,4 @@ def make_env(height, width, bounded, loaded, mode="train", threshold=0.3):
         env = TopOptEnv(height, width, bounded, loaded, mode, threshold)
         return env
     return _init
-
 

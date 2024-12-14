@@ -16,9 +16,6 @@ import feature_extractor as fe
 import constants as const
 
 
-
-
-
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -49,23 +46,26 @@ def fem_analysis_func():
     a,b,c,d = dsf.extract_fem_data(grid)
     print("nodes", a)
     print("element", b)
-    print("bounded:", c)
-    print("loaded:", d)
+    # print("bounded:", c)
+    # print("loaded:", d)
     fem.plot_mesh(a, b)
 
     # Call the FEM function
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    (init_max_stress, init_max_strain, _, _, _,
-    init_average_stress, init_average_strain, _, _, _) = fem.FEM(
-        a, b, c, d, plot_flag=True, grid=grid, device=device
-    )
+    init_vm_stresses = fem.FEM(a, b, c, d, plot_flag=True, grid=grid, 
+                               device=device)
 
+
+    grid =dsf.convert_grid_with_von_mises(grid, init_vm_stresses)
+
+    print(np.round(grid, 3))
     bad = False
     good = False
 
     bad = True
     #good = True
     # Modify the grid
+
     if bad:
         dsf.remove_material(grid, -2, -1)
         print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
@@ -149,12 +149,12 @@ def learn(num_envs):
     # Set up TensorBoard logger
     log_dir = "./tensorboard_logs/"
 
-    policy_kwargs = dict(
-        features_extractor_class=fe.CustomCombinedExtractor,
-        features_extractor_kwargs={}
+    policy_kwargs=dict(
+        features_extractor_class=CommonCNN,
+        net_arch=[dict(pi=[64, 64], vf=[64, 64])]
     )
     # Create the PPO model with the logger
-    model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device='cuda' if torch.cuda.is_available() else 'cpu')
+    model = PPO("CnnPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device=const.DEVICE)
 
     # Train the model
     with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True) as prof:
@@ -283,3 +283,4 @@ def cnn():
     plt.xlabel("Feature Index")
     plt.ylabel("Batch Index")
     plt.show()
+

@@ -62,8 +62,8 @@ LOADED_Y = 3
 """The Constant used to access the a which are loaded in the y direction"""
 
 BOUNDED_CHAR = "B"
-E = 100.0
-v = 0.3
+E = 1.0
+v = 0.33
 C_real = E / (1.0 + v) / (1.0 - 2.0 * v) * np.array([[1.0 - v, v, 0.0], [v, 1.0 - v, 0.0], [0.0, 0.0, 0.5 - v]])
 
 DUMMY_MATERIAL_E = 1e-6

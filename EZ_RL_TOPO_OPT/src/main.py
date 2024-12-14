@@ -5,8 +5,8 @@ NUM_ENVS = 10
 
 def main():
     #test.env_compatability()
-    #test.fem_analysis_func()
-    test.learn(NUM_ENVS)
+    test.fem_analysis_func()
+    #test.learn(NUM_ENVS)
     #test.loading(NUM_ENVS)
     #test.cnn()
 
