@@ -1,6 +1,7 @@
 import tests as test
 
 NUM_ENVS = 10
+NUM_TIMESTEPS = 1e6
 
 
 def main():

@@ -111,7 +111,7 @@ def env_compatability():
     env = rl.TopOptEnv(height, width, bounded, loaded)
     check_env(env, warn=True)
 
-def learn(num_envs):
+def learn(num_envs, num_timesteps=5e5):
     """
     Runs a reinforcement learning test for topology optimization using PPO (Proximal Policy Optimization).
     This function performs the following steps:
@@ -157,12 +157,13 @@ def learn(num_envs):
     model = PPO("CnnPolicy", env, verbose=1, tensorboard_log=log_dir, policy_kwargs=policy_kwargs,device=const.DEVICE)
 
     # Train the model
-    with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True) as prof:
-        with record_function("model_training"):
-            # Train the model
-            model.learn(total_timesteps=5e2, progress_bar=True)
+    # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, with_stack=True) as prof:
+    #     with record_function("model_training"):
+    #         # Train the model
+    #         model.learn(total_timesteps=num_timesteps, progress_bar=True)
+    model.learn(total_timesteps=num_timesteps, progress_bar=True)
     model.save("ppo_topopt")
-    prof.step()
+    # prof.step()
 
     print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
 
