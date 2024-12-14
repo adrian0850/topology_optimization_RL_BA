@@ -13,7 +13,7 @@ import FEM as fem
 
 device = const.DEVICE
 
-def reward_function(design, initial_max_stress, current_max_stress, initial_max_strain, current_max_strain, initial_avg_stress, current_avg_stress, initial_avg_strain, current_avg_strain):
+def old_reward_function(design, init_stress, curr_stress):
     # Calculate the ratio of initial to current number of elements
     initial_num_elements = np.size(design)
     current_num_elements = np.count_nonzero(design[0, :, :])
@@ -31,14 +31,23 @@ def reward_function(design, initial_max_stress, current_max_stress, initial_max_
     reward = 100*reward / (10 + reward)
     return reward
 
-def get_reward(grid, init_stress, init_strain, init_avg_stress, init_avg_strain):
+def reward_function(grid, init_strain, curr_strain):
+    initial_num_elements = np.size(grid[const.DESIGN, :, :])
+    current_num_voided = initial_num_elements - np.count_nonzero(grid[const.DESIGN, :, :])
+    element_ration = (current_num_voided / initial_num_elements)**2
+    strain_ration = (init_strain / curr_strain)**2
+    reward = element_ration + strain_ration
+    return 10 * reward
+
+def get_reward(grid, init_strain):
     a,b,c,d = dsf.extract_fem_data(grid)
     #fem.plot_mesh(a, b)
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    max_stress, max_strain, avg_u1, avg_u2, element_count, average_stress, average_strain, max_displacement_1, max_displacement_2, avg_strain_over_nodes = fem.FEM(a, b, c, d, plot_flag = False, grid=grid, device=device)
-    reward = reward_function(grid, init_stress, max_stress, init_strain, max_strain, init_avg_stress, average_stress, init_avg_strain, average_strain)
-
-    return reward, max_stress, max_strain, average_stress, average_strain
+    von_mises_stresses, curr_avg_strain = fem.FEM(a, b, c, d, plot_flag=False, 
+                                         grid=grid, device=const.DEVICE)
+    print("init_avg_strain", init_strain)
+    print("curr_avg_strain: ", curr_avg_strain)
+    reward = reward_function(grid, init_strain, curr_avg_strain)
+    return reward, von_mises_stresses
 
 def get_needed_fem_values(grid):
     a,b,c,d = dsf.extract_fem_data(grid)

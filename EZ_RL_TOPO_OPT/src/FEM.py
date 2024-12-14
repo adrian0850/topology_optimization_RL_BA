@@ -2,9 +2,12 @@ import math
 import constants as const
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
+
+matplotlib.use('Agg')
 
 def shape(xi):
     xi, eta = tuple(xi)
@@ -44,7 +47,7 @@ def plot_mesh(nodes, conn, width=10, height=8):
         plt.text(y, -x, str(i + 1), fontsize=12, ha='right', color='red')
 
     plt.axis('equal')
-    plt.show()
+    plt.savefig(const.FIG_DIR + "mesh.png")
 
 def get_max_stress_and_strain(smax, smin, emax, emin):
     max_stress = np.max(np.abs(np.concatenate((smax, smin))))
@@ -252,12 +255,11 @@ def FEM(nodes, conn, boundary, load, plot_flag, grid, device='cpu'):
         xvec = []
         yvec = []
         res  = []
-        plot_type = 'e11'
+        plot_type = 'u1'
         voided_nodes = set()
         for c in conn:
             if c[4]:  # Check if the element is voided
                 voided_nodes.update(c[:4])
-        
         for ni, pt in enumerate(nodes):
             xvec.append(pt[1] + u[2*ni+1])  # Swap x and y
             yvec.append(-(pt[0] + u[2*ni]))   # Swap x and y, negate y
@@ -311,7 +313,7 @@ def FEM(nodes, conn, boundary, load, plot_flag, grid, device='cpu'):
         plt.colorbar(t)
         plt.title(plot_type)
         plt.axis('equal')
-        plt.show()
+        plt.savefig("fem.png")
         print('Done.')
 
     if np.isnan(smax).any() or np.isnan(emax).any() or np.isnan(avg_u1).any() or np.isnan(avg_u2).any() or np.isnan(average_stress).any() or np.isnan(average_strain).any():
@@ -319,7 +321,7 @@ def FEM(nodes, conn, boundary, load, plot_flag, grid, device='cpu'):
 
     avg_strain_over_nodes = max(abs((average_strain[0]) / len(conn)) * 10000,abs((average_strain[1]) / len(conn)) * 10000, abs((average_strain[2]) / len(conn)) * 10000)
     max_stress, max_strain = get_max_stress_and_strain(smax, smin, emax, emin)
-    return von_mises_stresses
+    return von_mises_stresses, avg_strain_over_nodes
     #return  von_mises_stresses, max_stress, max_strain, avg_u1, avg_u2, len(conn), np.max(average_stress), np.max(average_strain), np.max(u[0::2]), np.max(u[1::2]), avg_strain_over_nodes
 
 

@@ -6,7 +6,7 @@ NUM_TIMESTEPS = 1e6
 
 def main():
     #test.env_compatability()
-    test.fem_analysis_func()
+    test.fem_analysis_func(strat="good")
     #test.learn(NUM_ENVS)
     #test.loading(NUM_ENVS)
     #test.cnn()

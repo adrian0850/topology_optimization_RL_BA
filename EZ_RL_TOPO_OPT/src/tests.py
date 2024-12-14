@@ -26,7 +26,7 @@ def set_seed(seed):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-def fem_analysis_func():
+def fem_analysis_func(strat):
     width = int(input("Enter grid width: "))
     height = int(input("Enter grid height: "))
 
@@ -51,41 +51,34 @@ def fem_analysis_func():
     fem.plot_mesh(a, b)
 
     # Call the FEM function
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    init_vm_stresses = fem.FEM(a, b, c, d, plot_flag=True, grid=grid, 
-                               device=device)
-
+    init_vm_stresses, init_avg_strain = fem.FEM(a, b, c, d, plot_flag=False,
+                                                grid=grid, device=const.DEVICE)
 
     grid =dsf.convert_grid_with_von_mises(grid, init_vm_stresses)
 
     print(np.round(grid, 3))
+    print("np.size(grid)", np.size(grid))
     bad = False
     good = False
 
-    bad = True
-    #good = True
+    #bad = True
+    good = True
     # Modify the grid
 
-    if bad:
+    if strat == "bad":
         dsf.remove_material(grid, -2, -1)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
         dsf.remove_material(grid, -2, -2)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
         dsf.remove_material(grid, -2, -3)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
-    elif good:
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
+    elif strat == "good":
         dsf.remove_material(grid, 0, -1)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
         dsf.remove_material(grid, 0, -2)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
         dsf.remove_material(grid, 1, -1)
-        print("Reward,\t", rl.get_reward(grid, init_max_stress, init_max_strain,
-                                         init_average_stress, init_average_strain))
+        print("Reward,\t", rl.get_reward(grid, init_avg_strain)[0])
     else:
         grid[-0.5*height][-0.5*width] = 0
 

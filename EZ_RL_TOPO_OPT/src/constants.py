@@ -73,3 +73,5 @@ C_dummy = DUMMY_MATERIAL_E / (1.0 + DUMMY_MATERIAL_V) / (1.0 - 2.0 * DUMMY_MATER
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 #DEVICE = "cpu"
+
+FIG_DIR ="figures/"
