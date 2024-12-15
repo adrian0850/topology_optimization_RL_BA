@@ -51,7 +51,7 @@ def fem_analysis_func(strat):
     fem.plot_mesh(a, b)
 
     # Call the FEM function
-    init_vm_stresses, init_avg_strain = fem.FEM(a, b, c, d, plot_flag=False,
+    init_vm_stresses, init_avg_strain = fem.FEM(a, b, c, d, plot_flag=True,
                                                 grid=grid, device=const.DEVICE)
 
     grid =dsf.convert_grid_with_von_mises(grid, init_vm_stresses)
